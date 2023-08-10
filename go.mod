@@ -11,11 +11,11 @@ require (
 )
 
 require (
-	github.com/abema/go-mp4 v0.10.1 // indirect
+	github.com/abema/go-mp4 v0.11.0 // indirect
 	github.com/aler9/writerseeker v0.0.0-20220601075008-6f0e685b9c82 // indirect
 	github.com/asticode/go-astikit v0.30.0 // indirect
 	github.com/asticode/go-astits v1.11.0 // indirect
-	github.com/bluenviron/gohlslib v0.2.5 // indirect
+	github.com/bluenviron/gohlslib v0.3.0 // indirect
 	github.com/bluenviron/mediacommon v0.7.0 // indirect
 	github.com/cnotch/ipchub v1.1.0 // indirect
 	github.com/denisbrodbeck/machineid v1.0.1 // indirect

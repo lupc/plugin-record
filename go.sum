@@ -1,6 +1,8 @@
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/abema/go-mp4 v0.10.1 h1:wOhZgNxjduc8r4FJdwPa5x/gdBSSX+8MTnfNj/xkJaE=
 github.com/abema/go-mp4 v0.10.1/go.mod h1:vPl9t5ZK7K0x68jh12/+ECWBCXoWuIDtNgPtU2f04ws=
+github.com/abema/go-mp4 v0.11.0 h1:XJfpSmEdUBMvWnDKIiNznLGZPpeDxJ/qDdN6Ust1ADk=
+github.com/abema/go-mp4 v0.11.0/go.mod h1:vPl9t5ZK7K0x68jh12/+ECWBCXoWuIDtNgPtU2f04ws=
 github.com/aler9/writerseeker v0.0.0-20220601075008-6f0e685b9c82 h1:9WgSzBLo3a9ToSVV7sRTBYZ1GGOZUpq4+5H3SN0UZq4=
 github.com/aler9/writerseeker v0.0.0-20220601075008-6f0e685b9c82/go.mod h1:qsMrZCbeBf/mCLOeF16KDkPu4gktn/pOWyaq1aYQE7U=
 github.com/asticode/go-astikit v0.30.0 h1:DkBkRQRIxYcknlaU7W7ksNfn4gMFsB0tqMJflxkRsZA=
@@ -10,6 +12,8 @@ github.com/asticode/go-astits v1.11.0/go.mod h1:QSHmknZ51pf6KJdHKZHJTLlMegIrhega
 github.com/benbjohnson/clock v1.1.0 h1:Q92kusRqC1XV2MjkWETPvjJVqKetz1OzxZB7mHJLju8=
 github.com/bluenviron/gohlslib v0.2.5 h1:M+uWOLjOa7hirUITLndf9bYarA8F7HR1m7+5dG/3WVI=
 github.com/bluenviron/gohlslib v0.2.5/go.mod h1:IvhV5h+92FljHy/xHlcOZm09rDeqg1RR88MjCTBx67Y=
+github.com/bluenviron/gohlslib v0.3.0 h1:ze8cCKszGC2LAWp0B+qIXZIlCZocB7a3BKeBo9E8Sr0=
+github.com/bluenviron/gohlslib v0.3.0/go.mod h1:aO69Vu0mMUxWrLmgS6g/S3Y3sfAhyg2SXaMEL7yNlWc=
 github.com/bluenviron/mediacommon v0.7.0 h1:dJWLLL9oDbAqfK8KuNfnDUQwNbeMAtGeRjZc9Vo95js=
 github.com/bluenviron/mediacommon v0.7.0/go.mod h1:wuLJdxcITiSPgY1MvQqrX+qPlKmNfeV9wNvXth5M98I=
 github.com/bytedance/sonic v1.8.0 h1:ea0Xadu+sHlu7x5O3gKhRpQ1IKiMrSiHttPF0ybECuA=
@@ -322,3 +326,5 @@ m7s.live/engine/v4 v4.13.8 h1:pDl8YWxip5aTidw2Q4NuU+8A6irBraLRfoeBi42S6iQ=
 m7s.live/engine/v4 v4.13.8/go.mod h1:k/6iFSuJxmhJL8VO45NAga8BbgZHLLfRXOwCcCzk2s8=
 m7s.live/plugin/hls/v4 v4.3.1 h1:FXcQShWnNTE0Guxg6YMzb5pbvMpn6MKiwcZ05N6nzhs=
 m7s.live/plugin/hls/v4 v4.3.1/go.mod h1:HSV/yO9NMvmNkompn+faM/0en0t3q0axp4zEA2mdyWw=
+m7s.live/plugin/hls/v4 v4.3.2 h1:3f5zeFOOWmqQOiMb+qTYFMjhN2fa2ge6/vwr54nxXlA=
+m7s.live/plugin/hls/v4 v4.3.2/go.mod h1:Kv9V0xFv22sxeef1aIWpjykxNNqfZYkBo2S95pWrrpc=

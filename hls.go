@@ -20,6 +20,11 @@ type HLSRecorder struct {
 	packet             mpegts.MpegTsPESPacket
 	Recorder
 	MemoryTs
+	lastInf *MyInf //记录最后一个Inf
+}
+type MyInf struct {
+	hls.PlaylistInf
+	Time time.Time //时间
 }
 
 func NewHLSRecorder() (r *HLSRecorder) {
@@ -94,7 +99,8 @@ func (h *HLSRecorder) OnEvent(event any) {
 
 // 创建一个新的ts文件
 func (h *HLSRecorder) CreateFile() (fw FileWr, err error) {
-	tsFilename := strconv.FormatInt(time.Now().Unix(), 10) + ".ts"
+	var curTsTime = time.Now()
+	tsFilename := strconv.FormatInt(curTsTime.Unix(), 10) + ".ts"
 	filePath := filepath.Join(h.Stream.Path, tsFilename)
 	fw, err = h.CreateFileFn(filePath, false)
 	if err != nil {
@@ -102,13 +108,26 @@ func (h *HLSRecorder) CreateFile() (fw FileWr, err error) {
 		return
 	}
 	h.Info("create file", zap.String("path", filePath))
-	inf := hls.PlaylistInf{
-		Duration: h.Fragment.Seconds(),
-		Title:    tsFilename,
+
+	var duration = h.Fragment.Seconds()
+	if h.lastInf != nil {
+		duration = float64(curTsTime.Sub(h.lastInf.Time).Seconds())
+		h.lastInf.Duration = duration //修正时长
+
+		//写入上一次Inf
+		if err = h.playlist.WriteInf(h.lastInf.PlaylistInf); err != nil {
+			return
+		}
+
 	}
-	if err = h.playlist.WriteInf(inf); err != nil {
-		return
+
+	h.lastInf = &MyInf{
+		PlaylistInf: hls.PlaylistInf{
+			Duration: duration,
+			Title:    tsFilename},
+		Time: curTsTime,
 	}
+
 	if err = mpegts.WriteDefaultPATPacket(fw); err != nil {
 		return
 	}
