@@ -1,4 +1,4 @@
-module m7s.live/plugin/record/v4
+module github.com/lupc/plugin-record/v4
 
 go 1.19
 
