@@ -58,7 +58,7 @@ func (r *Record) Init() {
 		if err = os.MkdirAll(filepath.Dir(filePath), 0766); err != nil {
 			return file, err
 		}
-		file, err = os.OpenFile(filePath, os.O_CREATE | os.O_RDWR | util.Conditoinal(append, os.O_APPEND, os.O_TRUNC), 0766)
+		file, err = os.OpenFile(filePath, os.O_CREATE|os.O_RDWR|util.Conditoinal(append, os.O_APPEND, os.O_TRUNC), 0766)
 		return
 	}
 }
