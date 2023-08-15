@@ -42,6 +42,7 @@ func (h *HLSRecorder) Start(streamPath string) error {
 	// 	//目录变更，新建新的m3u8文件
 	// 	h.createFile()
 	// }
+	h.StartAutoClean()
 	return h.start(h, streamPath, SUBTYPE_RAW)
 }
 

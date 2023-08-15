@@ -31,6 +31,7 @@ type Record struct {
 	AutoRecord    bool
 	Filter        string
 	Fragment      time.Duration //分片大小，0表示不分片
+	AutoClean     int32         //自动清理N天前的录像，0表示不清理，30表示30天前
 	filterReg     *regexp.Regexp
 	fs            http.Handler
 	CreateFileFn  func(filename string, append bool) (FileWr, error) `json:"-" yaml:"-"`
