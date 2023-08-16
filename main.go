@@ -22,6 +22,7 @@ type RecordConfig struct {
 	Raw        Record
 	RawAudio   Record
 	recordings sync.Map
+	FFmpeg     string //ffmpeg路径
 }
 
 //go:embed default.yaml

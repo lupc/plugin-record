@@ -18,8 +18,7 @@ import (
 // 点播配置
 
 type VodRes struct {
-	IsSuc     bool      //是否成功
-	Msg       string    //信息
+	ApiRes
 	StartTime time.Time //开始时间
 	EndTime   time.Time //结束时间
 	Url       string    //回放地址
@@ -46,9 +45,15 @@ func toTime(ts string) time.Time {
 }
 
 // 返回错误应答
-func returnErrRes(w *http.ResponseWriter, err any) {
+func returnErrRes(w *http.ResponseWriter, err any, stateCode int) {
 
-	var res = VodRes{IsSuc: false}
+	var res = ApiRes{}
+	res.IsSuc = false
+	if stateCode == 0 {
+		stateCode = 200
+	}
+	res.Code = stateCode
+	(*w).WriteHeader(int(stateCode))
 	switch err := err.(type) {
 	case string:
 		res.Msg = err
@@ -135,37 +140,19 @@ func findM3u8Info(dir string, st, et time.Time) *M3u8FileInfo {
 	return m3u8Info
 }
 
-// 生成HLS点播文件API接口
-func (p *RecordConfig) API_vod_hls(w http.ResponseWriter, r *http.Request) {
-
-	//统一处理错误
-	defer func() {
-		if err := recover(); err != nil {
-
-			returnErrRes(&w, err)
-		}
-	}()
-
-	var res = VodRes{}
-	var q = r.URL.Query()
-	// fmt.Printf("p: %v\n", p)
-
-	var startTime = q.Get("st")
-	var endTime = q.Get("et")
-	var streamPath = q.Get("path")
+// 生成点播
+func (p *RecordConfig) genVod(startTime, endTime, streamPath string) *M3u8FileInfo {
 	var st = toTime(startTime)
 	var et = toTime(endTime)
 
-	log.Infof("HLS点播请求: %v,", r.URL)
+	log.Infof("HLS点播生成, st=%v,et=%v,path=%v", st, et, streamPath)
 	var tsDir = path.Join(p.Hls.Path, streamPath)
-	// tsDir = path.Join(GetCurrentDirectory(), tsDir)
-	// var tsFiles = []fs.FileInfo{}
-	// infos := make([]fs.FileInfo, 0, len(entries))
 	var m3u8Info = findM3u8Info(tsDir, st, et)
-
+	var newInfo *M3u8FileInfo
+	var err error
 	if m3u8Info != nil {
 		//生成点播m3u8文件
-		var newInfo, err = m3u8Info.Tack(st, et)
+		newInfo, err = m3u8Info.Tack(st, et)
 		if err != nil {
 			panic(err)
 		}
@@ -184,24 +171,58 @@ func (p *RecordConfig) API_vod_hls(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		var fileName = fmt.Sprintf("%v-%v.m3u8", newInfo.StartTime.Unix(), newInfo.EndTime.Unix())
-		var filePath = path.Join(vodDir, fileName)
-		err = os.WriteFile(filePath, []byte(newInfo.ToFileContent()), 0666)
+		var m3u8Path = path.Join(vodDir, fileName)
+		err = os.WriteFile(m3u8Path, []byte(newInfo.ToFileContent()), 0666)
 		if err != nil {
 			panic(err)
 		}
-		log.Infof("HLS点播文件已生成: %v,", filePath)
-		res.Url = fmt.Sprintf("http://%v/%v", r.Host, strings.ReplaceAll(filePath, "/hls", ""))
-		res.StartTime = newInfo.StartTime
-		res.EndTime = newInfo.EndTime
+		log.Infof("HLS点播文件已生成: %v,", m3u8Path)
+		newInfo.Path = m3u8Path
+		// res.Url = fmt.Sprintf("http://%v/%v", r.Host, strings.ReplaceAll(filePath, "/hls", ""))
+		// res.StartTime = newInfo.StartTime
+		// res.EndTime = newInfo.EndTime
 	} else {
 		panic("指定时段内找不到录像！")
 	}
 
+	return newInfo
+}
+
+// 生成HLS点播文件API接口
+func (p *RecordConfig) API_vod_hls(w http.ResponseWriter, r *http.Request) {
+
+	//统一处理错误
+	defer func() {
+		if err := recover(); err != nil {
+			returnErrRes(&w, err, 400)
+		}
+	}()
+
+	log.Infof("HLS点播请求：%v", r.URL)
+	var res = VodRes{}
+	var q = r.URL.Query()
+	// fmt.Printf("p: %v\n", p)
+
+	var startTime = q.Get("st")
+	var endTime = q.Get("et")
+	var streamPath = q.Get("path")
+
+	var m3u8Info = p.genVod(startTime, endTime, streamPath)
+
+	if m3u8Info == nil {
+		panic("HLS点播失败！")
+	}
+
+	res.Url = fmt.Sprintf("http://%v/%v", r.Host, strings.ReplaceAll(m3u8Info.Path, "/hls", ""))
+	res.StartTime = m3u8Info.StartTime
+	res.EndTime = m3u8Info.EndTime
 	res.IsSuc = true
-	res.Msg = "HLS点播成功！"
-	// var msg = fmt.Sprintf("请求点播地址:startTime=%v endTime=%v path=%v\n", startTime, endTime, streamPath)
-	// w.Write([]byte(msg))
-	resJson, _ := json.Marshal(res)
+	res.Msg = "HLS点播成功"
+
+	resJson, err := json.Marshal(res)
+	if err != nil {
+		panic(err)
+	}
 
 	w.Write([]byte(resJson))
 

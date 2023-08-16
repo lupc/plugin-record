@@ -25,6 +25,7 @@ type M3u8FileInfo struct {
 	EndTime   time.Time //结束时间
 	TsFiles   []*TsInfo //ts文件信息
 	TsDirPath string    //ts文件所在目录，生成m3u8文件内容时会在ts文件名前拼接该路径
+	Path      string    //m3u8文件路径
 }
 
 // 根据m3u8文件路径新建m3u8文件信息

@@ -10,6 +10,13 @@ import (
 	"m7s.live/engine/v4/util"
 )
 
+// WebAPI统一返回格式
+type ApiRes struct {
+	IsSuc bool   //是否成功
+	Code  int    //返回编码
+	Msg   string //应答消息
+}
+
 func (conf *RecordConfig) API_list(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	t := query.Get("type")
