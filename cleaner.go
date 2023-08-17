@@ -59,7 +59,7 @@ func CleanFiles(pathname string, days int32) error {
 	if len(fis) == 0 {
 		//删除空目录
 		err = os.Remove(pathname)
-		if err != nil {
+		if err == nil {
 			log.Infof("目录已删除：%v", pathname)
 		} else {
 			log.Errorf("目录删除出错：%v,%v", pathname, err)
@@ -84,7 +84,7 @@ func CleanFiles(pathname string, days int32) error {
 				log.Errorf("获取文件信息出错：%v,%v", fullname, err)
 			} else if needClean(finfo, days) {
 				err = os.Remove(fullname)
-				if err != nil {
+				if err == nil {
 					log.Infof("文件已删除：%v", fullname)
 				} else {
 					log.Errorf("文件删除出错：%v,%v", fullname, err)
