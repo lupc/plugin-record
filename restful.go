@@ -95,13 +95,13 @@ func (conf *RecordConfig) API_start(w http.ResponseWriter, r *http.Request) {
 }
 
 func (conf *RecordConfig) API_list_recording(w http.ResponseWriter, r *http.Request) {
-	util.ReturnJson(func() (recordings []any) {
+	util.ReturnFetchValue(func() (recordings []any) {
 		conf.recordings.Range(func(key, value any) bool {
 			recordings = append(recordings, value)
 			return true
 		})
 		return
-	}, time.Second, w, r)
+	}, w, r)
 }
 
 func (conf *RecordConfig) API_stop(w http.ResponseWriter, r *http.Request) {

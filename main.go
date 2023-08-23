@@ -57,41 +57,21 @@ var RecordPluginConfig = &RecordConfig{
 	},
 }
 
-//go:embed ui/*
-//go:embed README.md
-var ui embed.FS
+var plugin = InstallPlugin(RecordPluginConfig)
 
-func init() {
-	InstallPlugin(&PluginConfig{
-		Name:   "Record",
-		Type:   PLUGIN_SUBSCRIBER,
-		Config: &config,
-		Run:    run,
-		UIFile: &ui,
-		HotConfig: map[string]func(interface{}){
-			"AutoPublish": func(v interface{}) {
-				config.AutoPublish = v.(bool)
-			},
-			"AutoRecord": func(v interface{}) {
-				config.AutoRecord = v.(bool)
-			},
-		},
-	})
-}
-func run() {
-	OnSubscribeHooks.AddHook(onSubscribe)
-	OnPublishHooks.AddHook(onPublish)
-	os.MkdirAll(config.Path, 0755)
-	http.HandleFunc("/record/flv/list", func(writer http.ResponseWriter, r *http.Request) {
-		if files, err := tree(config.Path, 0); err == nil {
-			var bytes []byte
-			if bytes, err = json.Marshal(files); err == nil {
-				writer.Write(bytes)
-			} else {
-				writer.Write([]byte("{\"err\":\"" + err.Error() + "\"}"))
-			}
-		} else {
-			writer.Write([]byte("{\"err\":\"" + err.Error() + "\"}"))
+func (conf *RecordConfig) OnEvent(event any) {
+	switch v := event.(type) {
+	case FirstConfig, config.Config:
+		conf.Flv.Init()
+		conf.Mp4.Init()
+		conf.Fmp4.Init()
+		conf.Hls.Init()
+		conf.Raw.Init()
+		conf.RawAudio.Init()
+	case SEpublish:
+		streamPath := v.Target.Path
+		if conf.Flv.NeedRecord(streamPath) {
+			go NewFLVRecorder().Start(streamPath)
 		}
 		if conf.Mp4.NeedRecord(streamPath) {
 			go NewMP4Recorder().Start(streamPath)
