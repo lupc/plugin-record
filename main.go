@@ -68,6 +68,14 @@ func (conf *RecordConfig) OnEvent(event any) {
 		conf.Hls.Init()
 		conf.Raw.Init()
 		conf.RawAudio.Init()
+
+		//启动清理任务
+		conf.Hls.StartAutoClean()
+		conf.Flv.StartAutoClean()
+		conf.Fmp4.StartAutoClean()
+		conf.Mp4.StartAutoClean()
+		conf.Raw.StartAutoClean()
+		conf.RawAudio.StartAutoClean()
 	case SEpublish:
 		streamPath := v.Target.Path
 		if conf.Flv.NeedRecord(streamPath) {

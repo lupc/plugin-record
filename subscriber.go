@@ -121,7 +121,7 @@ func (r *Recorder) start(re IRecorder, streamPath string, subType byte) (err err
 			re.Close()
 		}()
 	}
-	r.StartAutoClean()
+
 	return
 }
 

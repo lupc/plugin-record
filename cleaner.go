@@ -8,7 +8,11 @@ import (
 )
 
 // 自动清理录像
-func (r *Recorder) StartAutoClean() {
+func (r *Record) StartAutoClean() {
+
+	if r.AutoClean <= 0 {
+		return
+	}
 
 	// 每日2点执行清理任务
 	now := time.Now()
@@ -18,10 +22,10 @@ func (r *Recorder) StartAutoClean() {
 	go DailyCron(dateTime, func() {
 		r.execClean()
 	})
-	log.Infof("自动清理任务已启动... 每天%v点执行,自动清理%v天前的文件。", hour, r.AutoClean)
+	log.Infof("自动清理任务:每天[%v]点清理目录[%v][%v]天前的文件。", hour, r.Path, r.AutoClean)
 }
 
-func (r *Recorder) execClean() {
+func (r *Record) execClean() {
 
 	//统一处理错误
 	defer func() {
