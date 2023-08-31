@@ -1,7 +1,9 @@
 package record
 
 import (
+	"fmt"
 	"math"
+	"os"
 	"path/filepath"
 	"strconv"
 	"time"
@@ -16,6 +18,7 @@ import (
 
 type HLSRecorder struct {
 	playlist           hls.Playlist
+	dayPlayList        hls.Playlist
 	video_cc, audio_cc byte
 	packet             mpegts.MpegTsPESPacket
 	Recorder
@@ -29,6 +32,67 @@ type MyInf struct {
 	Time time.Time //时间
 }
 
+// 打开或创建一个每天的m3u
+// func (r *HLSRecorder) openOrCreateDayM3u8() (f FileWr, err error) {
+// 	var now = time.Now()
+// 	filePath := filepath.Join(r.Stream.Path, fmt.Sprintf("%v%v", now.Format("20060102"), r.Ext))
+
+// 	f, err = r.CreateFileFn(filePath, r.append)
+// 	if err == nil {
+// 		r.Info("create file", zap.String("path", filePath))
+// 	} else {
+// 		r.Error("create file", zap.String("path", filePath), zap.Error(err))
+// 	}
+
+// 	return
+// }
+
+func IsFileExist(path string) bool {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true
+	}
+	if os.IsNotExist(err) {
+		return false
+	}
+	return true
+}
+func (h *HLSRecorder) initDayPlaylist() {
+	h.dayPlayList = hls.Playlist{
+		Writer:         h.Writer,
+		Version:        3,
+		Sequence:       0,
+		Targetduration: int(math.Ceil(h.Fragment.Seconds())),
+	}
+	var err error
+
+	var now = time.Now()
+	filePath := filepath.Join(h.Stream.Path, fmt.Sprintf("%v%v", now.Format("20060102"), h.Ext))
+
+	var isExist = IsFileExist(filepath.Join(h.Path, filePath))
+	var f FileWr
+	f, err = h.CreateFileFn(filePath, h.append) //创建或者打开
+	if err == nil {
+		h.Info("create file", zap.String("path", filePath))
+	} else {
+		h.Error("create file", zap.String("path", filePath), zap.Error(err))
+	}
+
+	h.dayPlayList.Writer = f
+	h.Writer = h.dayPlayList.Writer
+	h.SetIO(h.Writer)
+	if err != nil {
+		h.Sugar().Errorf("创建每天的m3u8出错:%v", err.Error)
+	}
+
+	if !isExist {
+		if err = h.dayPlayList.Init(); err != nil {
+			h.Sugar().Errorf("初始化每天的m3u8出错:%v", err.Error)
+		}
+	}
+
+}
+
 func NewHLSRecorder() (r *HLSRecorder) {
 	r = &HLSRecorder{}
 	r.Record = RecordPluginConfig.Hls
@@ -37,12 +101,11 @@ func NewHLSRecorder() (r *HLSRecorder) {
 
 func (h *HLSRecorder) Start(streamPath string) error {
 	h.ID = streamPath + "/hls"
-	// //注册回调
-	// h.LastDirChanged = func(dir string) {
-	// 	//目录变更，新建新的m3u8文件
-	// 	h.createFile()
-	// }
-	// h.StartAutoClean()
+	//注册回调
+	h.LastDirChanged = func(dir string) {
+		//目录变更，新建新的m3u8文件
+		h.initDayPlaylist()
+	}
 	return h.start(h, streamPath, SUBTYPE_RAW)
 }
 
@@ -56,22 +119,23 @@ func (h *HLSRecorder) OnEvent(event any) {
 	switch v := event.(type) {
 	case *HLSRecorder:
 		h.BytesPool = make(util.BytesPool, 17)
-		if h.Writer, err = h.createFile(); err != nil {
-			return
-		}
-		h.SetIO(h.Writer)
-		h.playlist = hls.Playlist{
-			Writer:         h.Writer,
-			Version:        3,
-			Sequence:       0,
-			Targetduration: int(math.Ceil(h.Fragment.Seconds())),
-		}
-		if err = h.playlist.Init(); err != nil {
-			return
-		}
+		// if h.Writer, err = h.createFile(); err != nil {
+		// 	return
+		// }
+		// h.SetIO(h.Writer)
+		// h.playlist = hls.Playlist{
+		// 	Writer:         h.Writer,
+		// 	Version:        3,
+		// 	Sequence:       0,
+		// 	Targetduration: int(math.Ceil(h.Fragment.Seconds())),
+		// }
+		// if err = h.playlist.Init(); err != nil {
+		// 	return
+		// }
 		if h.File, err = h.CreateFile(); err != nil {
 			return
 		}
+		h.initDayPlaylist()
 	case AudioFrame:
 		h.Recorder.OnEvent(event)
 		pes := &mpegts.MpegtsPESFrame{
@@ -130,7 +194,10 @@ func (h *HLSRecorder) CreateFile() (fw FileWr, err error) {
 		h.lastInf.Duration = duration //修正时长
 
 		//写入上一次Inf
-		if err = h.playlist.WriteInf(h.lastInf.PlaylistInf); err != nil {
+		// if err = h.playlist.WriteInf(h.lastInf.PlaylistInf); err != nil {
+		// 	return
+		// }
+		if err = h.dayPlayList.WriteInf(h.lastInf.PlaylistInf); err != nil {
 			return
 		}
 	}

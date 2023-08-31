@@ -9,8 +9,6 @@ import (
 	"regexp"
 	"strings"
 	"time"
-
-	"m7s.live/engine/v4/util"
 )
 
 type FileWr interface {
@@ -59,7 +57,7 @@ func (r *Record) Init() {
 		if err = os.MkdirAll(filepath.Dir(filePath), 0777); err != nil {
 			return file, err
 		}
-		file, err = os.OpenFile(filePath, os.O_CREATE|os.O_RDWR|util.Conditoinal(append, os.O_APPEND, os.O_TRUNC), 0777)
+		file, err = os.OpenFile(filePath, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0777)
 		return
 	}
 }

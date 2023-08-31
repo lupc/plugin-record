@@ -140,50 +140,104 @@ func findM3u8Info(dir string, st, et time.Time) *M3u8FileInfo {
 	return m3u8Info
 }
 
+// 找出目录下在时间段内的ts文件
+func findTsInfos(dir string, st, et time.Time) (tsFiles []*TsInfo) {
+
+	// var date1 = time.Date(st.Year(),st.Month(),st.Day(),0,0,0,0,time.Local)
+	// var date2 = time.Date(et.Year(),et.Month(),et.Day(),0,0,0,0,time.Local)
+	// var dateDirs []string
+	// for y := st.Year(); y <= et.Year(); y++ {
+	// 	for m := st.Month(); m <= et.Month(); m++ {
+	// 		for d := st.Day(); d <= et.Day(); d++ {
+	// 			dateDirs = append(dateDirs, filepath.Join(dir, fmt.Sprintf("%v-%v/%v", y, m, d)))
+	// 		}
+	// 	}
+	// }
+
+	// for _, dateDir := range dateDirs {
+	entries, err := os.ReadDir(dir)
+	if err == nil {
+		for _, entry := range entries {
+			info, err := entry.Info()
+			if err == nil && path.Ext(info.Name()) == ".m3u8" {
+				var timeStr = strings.ReplaceAll(path.Base(info.Name()), ".m3u8", "") //获取时间戳
+				if len(timeStr) >= 8 {
+					y, err := strconv.Atoi(timeStr[0:4])
+					if err != nil {
+						continue
+					}
+					m, err := strconv.Atoi(timeStr[4:6])
+					if err != nil {
+						continue
+					}
+					d, err := strconv.Atoi(timeStr[6:8])
+					if err != nil {
+						continue
+					}
+					var fileCreateTime = time.Date(y, time.Month(m), d, 0, 0, 0, 0, time.Local)
+					var fileModTime = info.ModTime()
+
+					if st.Before(fileModTime) && et.After(fileCreateTime) {
+						relPath := path.Join(dir, info.Name())
+						var info, err = New(relPath)
+						if err == nil {
+							for _, ts := range info.TsFiles {
+								if (st.Before(ts.Time) || st.Equal(ts.Time)) && et.After(ts.Time) {
+									tsFiles = append(tsFiles, ts)
+								}
+							}
+						}
+					}
+
+				}
+
+			}
+		}
+	}
+	// }
+
+	return
+}
+
 // 生成点播
 func (p *RecordConfig) genVod(startTime, endTime, streamPath string) *M3u8FileInfo {
 	var st = toTime(startTime)
 	var et = toTime(endTime)
 
 	log.Infof("HLS点播生成, st=%v,et=%v,path=%v", st, et, streamPath)
-	var tsDir = path.Join(p.Hls.Path, streamPath)
-	var m3u8Info = findM3u8Info(tsDir, st, et)
-	var newInfo *M3u8FileInfo
-	var err error
-	if m3u8Info != nil {
-		//生成点播m3u8文件
-		newInfo, err = m3u8Info.Tack(st, et)
-		if err != nil {
-			panic(err)
-		}
-		newInfo.TsDirPath = "../"
-		var vodDir = path.Join(tsDir, "vod")
-		if _, err := os.Stat(vodDir); os.IsNotExist(err) {
-			// 先创建文件夹
-			err = os.Mkdir(vodDir, 0777)
-			if err != nil {
-				panic(err)
-			}
-			// 再修改权限
-			err = os.Chmod(vodDir, 0777)
-			if err != nil {
-				panic(err)
-			}
-		}
-		var fileName = fmt.Sprintf("%v-%v.m3u8", newInfo.StartTime.Unix(), newInfo.EndTime.Unix())
-		var m3u8Path = path.Join(vodDir, fileName)
-		err = os.WriteFile(m3u8Path, []byte(newInfo.ToFileContent()), 0666)
-		if err != nil {
-			panic(err)
-		}
-		log.Infof("HLS点播文件已生成: %v,", m3u8Path)
-		newInfo.Path = m3u8Path
-		// res.Url = fmt.Sprintf("http://%v/%v", r.Host, strings.ReplaceAll(filePath, "/hls", ""))
-		// res.StartTime = newInfo.StartTime
-		// res.EndTime = newInfo.EndTime
-	} else {
-		panic("指定时段内找不到录像！")
+	var findDir = path.Join(p.Hls.Path, streamPath)
+	// var m3u8Info = findM3u8Info(tsDir, st, et)
+	var tsInfos = findTsInfos(findDir, st, et)
+	newInfo, err := Make(tsInfos)
+	if err != nil {
+		panic(err)
 	}
+
+	newInfo.JoinPath = "../"
+	var vodDir = path.Join(findDir, "vod")
+	if _, err := os.Stat(vodDir); os.IsNotExist(err) {
+		// 先创建文件夹
+		err = os.Mkdir(vodDir, 0777)
+		if err != nil {
+			panic(err)
+		}
+		// 再修改权限
+		err = os.Chmod(vodDir, 0777)
+		if err != nil {
+			panic(err)
+		}
+	}
+	var fileName = fmt.Sprintf("%v-%v.m3u8", newInfo.StartTime.Unix(), newInfo.EndTime.Unix())
+	var m3u8Path = path.Join(vodDir, fileName)
+	err = os.WriteFile(m3u8Path, []byte(newInfo.ToFileContent()), 0666)
+	if err != nil {
+		panic(err)
+	}
+	log.Infof("HLS点播文件已生成: %v,", m3u8Path)
+	newInfo.Path = m3u8Path
+	// res.Url = fmt.Sprintf("http://%v/%v", r.Host, strings.ReplaceAll(filePath, "/hls", ""))
+	// res.StartTime = newInfo.StartTime
+	// res.EndTime = newInfo.EndTime
 
 	return newInfo
 }

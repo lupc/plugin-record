@@ -3,6 +3,7 @@ package record
 import (
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"path"
 	"strconv"
@@ -24,9 +25,15 @@ type M3u8FileInfo struct {
 	StartTime time.Time //开始时间
 	EndTime   time.Time //结束时间
 	TsFiles   []*TsInfo //ts文件信息
-	TsDirPath string    //ts文件所在目录，生成m3u8文件内容时会在ts文件名前拼接该路径
+	JoinPath  string    //ts文件所在目录，生成m3u8文件内容时会在ts文件名前拼接该路径
 	Path      string    //m3u8文件路径
 }
+
+const (
+	M3U_HEAD = `#EXTM3U
+#EXT-X-VERSION:3
+#EXT-X-MEDIA-SEQUENCE:0`
+)
 
 // 根据m3u8文件路径新建m3u8文件信息
 func New(fileName string) (*M3u8FileInfo, error) {
@@ -86,6 +93,27 @@ func New(fileName string) (*M3u8FileInfo, error) {
 	return &m3u8, errOut
 }
 
+func Make(tsInfos []*TsInfo) (info *M3u8FileInfo, err error) {
+
+	var tsLen = len(tsInfos)
+	if tsInfos == nil || tsLen == 0 {
+		err = fmt.Errorf("TS列表为空！")
+		return
+	}
+
+	var st = tsInfos[0].Time
+	var last = tsInfos[tsLen-1]
+	var et = last.Time.Add(time.Duration(last.Len))
+	var head = M3U_HEAD + fmt.Sprintf("\n#EXT-X-TARGETDURATION:%v\n", math.Ceil(tsInfos[0].Len))
+	info = &M3u8FileInfo{
+		StartTime: st,
+		EndTime:   et,
+		Head:      head,
+		TsFiles:   tsInfos,
+	}
+	return
+}
+
 // 截取其中某个时间段作为一个新的m3u8内容返回
 func (m *M3u8FileInfo) Tack(st, et time.Time) (*M3u8FileInfo, error) {
 	if st == m.StartTime && et == m.EndTime {
@@ -127,7 +155,7 @@ func (m *M3u8FileInfo) ToFileContent() string {
 		for _, ts := range m.TsFiles {
 			sb.WriteString(fmt.Sprintf("#EXTINF:%v,", ts.Len))
 			sb.WriteString("\n")
-			sb.WriteString(m.TsDirPath)
+			sb.WriteString(m.JoinPath)
 			sb.WriteString(ts.FileName)
 			sb.WriteString("\n")
 		}
