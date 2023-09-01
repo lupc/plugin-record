@@ -30,6 +30,8 @@ type Record struct {
 	Filter        string
 	Fragment      time.Duration //分片大小，0表示不分片
 	AutoClean     int32         //自动清理N天前的录像，0表示不清理，30表示30天前
+	Retry         int32         //意外停止自动重试次数，-1:无限重试，0:不重试，
+	RetryInterval time.Duration //重试时间间隔,最小1秒
 	filterReg     *regexp.Regexp
 	fs            http.Handler
 	CreateFileFn  func(filename string, append bool) (FileWr, error) `json:"-" yaml:"-"`
@@ -60,6 +62,7 @@ func (r *Record) Init() {
 		file, err = os.OpenFile(filePath, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0777)
 		return
 	}
+
 }
 
 func (r *Record) Tree(dstPath string, level int) (files []*VideoFileInfo, err error) {

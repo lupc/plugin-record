@@ -19,25 +19,30 @@ type IRecorder interface {
 }
 
 type Recorder struct {
-	Subscriber
+	Subscriber     `json:"-" yaml:"-"`
 	SkipTS         uint32
 	Record         `json:"-" yaml:"-"`
 	File           FileWr `json:"-" yaml:"-"`
 	FileName       string // 自定义文件名，分段录像无效
 	append         bool   // 是否追加模式
-	lastDir        string //记录最后录像目录路径
-	LastDirChanged func(dir string)
+	LastDir        string //记录最后录像目录路径
+	lastDirChanged func(dir string)
+	IsRecoding     bool  //正在录像
+	RetryCount     int32 //重试次数
+	StreamPath     string
+	SubType        byte
+	RID            string
 }
 
 // 最后录像目录路径
 func (r *Recorder) GetLastDir() string {
-	return r.lastDir
+	return r.LastDir
 }
 func (r *Recorder) SetLastDir(value string) {
-	if r.lastDir != value {
-		r.lastDir = value
-		if r.LastDirChanged != nil {
-			r.LastDirChanged(r.lastDir)
+	if r.LastDir != value {
+		r.LastDir = value
+		if r.lastDirChanged != nil {
+			r.lastDirChanged(r.LastDir)
 		}
 	}
 }
@@ -87,7 +92,7 @@ func (r *Recorder) getLastDir(streamPath string) string {
 	var now = time.Now()
 	dir = filepath.Join(dir, now.Format("2006-01/02"))
 	r.SetLastDir(dir)
-	return r.lastDir
+	return r.LastDir
 }
 
 // // 获取记录文件路径，
@@ -110,15 +115,26 @@ func (r *Recorder) start(re IRecorder, streamPath string, subType byte) (err err
 	err = plugin.Subscribe(streamPath, re)
 	if err == nil {
 		if _, loaded := RecordPluginConfig.recordings.LoadOrStore(r.ID, re); loaded {
-			return ErrRecordExist
+			if r.IsRecoding {
+				return ErrRecordExist
+			}
+
 		}
+		r.RID = r.ID
+		r.StreamPath = streamPath
+		r.SubType = subType
 		r.recording[streamPath] = re
 		r.Closer = re
+		r.Sugar().Debugf("%v开始录制。。", r.ID)
 		go func() {
+			r.IsRecoding = true
 			r.PlayBlock(subType)
-			RecordPluginConfig.recordings.Delete(r.ID)
-			delete(r.recording, streamPath)
+			// RecordPluginConfig.recordings.Delete(r.ID)
+			// delete(r.recording, streamPath)
 			re.Close()
+			r.IsRecoding = false
+			// RecordPluginConfig.retryRecorders.LoadOrStore(r.ID, re)
+			r.Sugar().Debugf("%v已停止录制。", r.ID)
 		}()
 	}
 
@@ -127,14 +143,17 @@ func (r *Recorder) start(re IRecorder, streamPath string, subType byte) (err err
 
 func (r *Recorder) cut(absTime uint32) {
 	if ts := absTime - r.SkipTS; time.Duration(ts)*time.Millisecond >= r.Fragment {
+		r.Debug("切片", zap.Any("ID", r.ID))
 		r.SkipTS = absTime
 		r.Close()
 		if file, err := r.Spesific.(IRecorder).CreateFile(); err == nil {
 			r.File = file
 			r.Spesific.OnEvent(file)
 		} else {
-			r.Stop(zap.Error(err))
+			r.Stop(zap.Any("resion", "切片出错"), zap.Error(err))
 		}
+		// } else {
+		// 	r.Debug("切片条件不符", zap.Any("ts", ts), zap.Any("r.Fragment", r.Fragment))
 	}
 }
 

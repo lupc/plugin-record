@@ -22,8 +22,8 @@ type HLSRecorder struct {
 	video_cc, audio_cc byte
 	packet             mpegts.MpegTsPESPacket
 	Recorder
-	MemoryTs
-	lastInf MyInf //记录最后一个Inf
+	MemoryTs `json:"-" yaml:"-"`
+	lastInf  MyInf //记录最后一个Inf
 
 }
 
@@ -102,7 +102,7 @@ func NewHLSRecorder() (r *HLSRecorder) {
 func (h *HLSRecorder) Start(streamPath string) error {
 	h.ID = streamPath + "/hls"
 	//注册回调
-	h.LastDirChanged = func(dir string) {
+	h.lastDirChanged = func(dir string) {
 		//目录变更，新建新的m3u8文件
 		h.initDayPlaylist()
 	}
