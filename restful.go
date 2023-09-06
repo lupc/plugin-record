@@ -107,9 +107,9 @@ func (conf *RecordConfig) API_list_recording(w http.ResponseWriter, r *http.Requ
 func (conf *RecordConfig) API_stop(w http.ResponseWriter, r *http.Request) {
 	if recorder, ok := conf.recordings.Load(r.URL.Query().Get("id")); ok {
 		recorder.(ISubscriber).Stop()
-		var rcd = recorder.(IRecorder).GetRecorder()
-		RecordPluginConfig.recordings.Delete(rcd.ID)
-		delete(rcd.recording, rcd.StreamPath)
+		// var rcd = recorder.(IRecorder).GetRecorder()
+		// RecordPluginConfig.recordings.Delete(rcd.ID)
+		// delete(rcd.recording, rcd.StreamPath)
 		w.Write([]byte("ok"))
 		return
 	}

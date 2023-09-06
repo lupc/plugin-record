@@ -27,11 +27,12 @@ type Recorder struct {
 	append         bool   // 是否追加模式
 	LastDir        string //记录最后录像目录路径
 	lastDirChanged func(dir string)
-	IsRecoding     bool  //正在录像
-	RetryCount     int32 //重试次数
-	StreamPath     string
-	SubType        byte
-	RID            string
+	// IsRecoding     bool  //正在录像
+	// RetryCount     int32 //重试次数
+	StartTime  time.Time //开始录像时间
+	StreamPath string
+	SubType    byte
+	RID        string
 }
 
 // 最后录像目录路径
@@ -111,15 +112,11 @@ func (r *Recorder) getLastDir(streamPath string) string {
 // }
 
 func (r *Recorder) start(re IRecorder, streamPath string, subType byte) (err error) {
-
+	if _, loaded := RecordPluginConfig.recordings.LoadOrStore(r.ID, re); loaded {
+		return ErrRecordExist
+	}
 	err = plugin.Subscribe(streamPath, re)
 	if err == nil {
-		if _, loaded := RecordPluginConfig.recordings.LoadOrStore(r.ID, re); loaded {
-			if r.IsRecoding {
-				return ErrRecordExist
-			}
-
-		}
 		r.RID = r.ID
 		r.StreamPath = streamPath
 		r.SubType = subType
@@ -127,12 +124,13 @@ func (r *Recorder) start(re IRecorder, streamPath string, subType byte) (err err
 		r.Closer = re
 		r.Sugar().Debugf("%v开始录制。。", r.ID)
 		go func() {
-			r.IsRecoding = true
+			r.StartTime = time.Now()
+			// r.IsRecoding = true
 			r.PlayBlock(subType)
-			// RecordPluginConfig.recordings.Delete(r.ID)
-			// delete(r.recording, streamPath)
+			RecordPluginConfig.recordings.Delete(r.ID)
+			delete(r.recording, streamPath)
 			re.Close()
-			r.IsRecoding = false
+			// r.IsRecoding = false
 			// RecordPluginConfig.retryRecorders.LoadOrStore(r.ID, re)
 			r.Sugar().Debugf("%v已停止录制。", r.ID)
 		}()

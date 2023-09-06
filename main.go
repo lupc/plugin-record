@@ -5,11 +5,7 @@ import (
 	"errors"
 	"io"
 	"sync"
-	"time"
 
-	"m7s.live/engine/v4/log"
-
-	"go.uber.org/zap"
 	. "m7s.live/engine/v4"
 	"m7s.live/engine/v4/codec"
 	"m7s.live/engine/v4/config"
@@ -81,13 +77,13 @@ func (conf *RecordConfig) OnEvent(event any) {
 		conf.Raw.StartAutoClean()
 		conf.RawAudio.StartAutoClean()
 
-		//启动自动重试
-		conf.Hls.StartRetryRecord()
-		conf.Flv.StartRetryRecord()
-		conf.Fmp4.StartRetryRecord()
-		conf.Mp4.StartRetryRecord()
-		conf.Raw.StartRetryRecord()
-		conf.RawAudio.StartRetryRecord()
+		// //启动自动重试
+		// conf.Hls.StartRetryRecord()
+		// conf.Flv.StartRetryRecord()
+		// conf.Fmp4.StartRetryRecord()
+		// conf.Mp4.StartRetryRecord()
+		// conf.Raw.StartRetryRecord()
+		// conf.RawAudio.StartRetryRecord()
 	case SEpublish:
 		streamPath := v.Target.Path
 		if conf.Flv.NeedRecord(streamPath) {
@@ -145,50 +141,50 @@ func getFLVDuration(file io.ReadSeeker) uint32 {
 	return 0
 }
 
-// 子线程定时检查意外断开的录像重新录制
-func (r *Record) StartRetryRecord() {
-	if r.Retry == 0 {
-		return
-	}
-	log.Debugf("%v录像自动重试开启。。", r.Path, zap.Any("retry", r.Retry), zap.Any("retryInterval", r.RetryInterval))
-	go func() {
-		var interval = r.RetryInterval
-		if interval <= 0 {
-			interval = 1 * time.Second
-		}
-		for {
-			var removes = []*Recorder{}
-			RecordPluginConfig.recordings.Range(func(key, value any) bool {
-				ir, ok := value.(IRecorder)
-				if ok {
-					var recorder = ir.GetRecorder()
-					if recorder.IsRecoding {
-						recorder.RetryCount = 0
-						// removes = append(removes, recorder)
-					} else {
-						//重试
-						if r.Retry < 0 || recorder.RetryCount < r.Retry {
-							recorder.RetryCount++
-							log.Debug("录像重试。。", zap.Any("ID", recorder.ID), zap.Any("retryCount", recorder.RetryCount))
-							recorder.start(recorder.Spesific.(IRecorder), recorder.StreamPath, recorder.SubType)
-						} else {
-							log.Debug("超重试次数,停止录像", zap.Any("ID", recorder.ID), zap.Any("retryCount", recorder.RetryCount))
-							removes = append(removes, recorder)
-							recorder.Stop(zap.String("resion", "重试超最大次数"))
-							recorder.Close()
-						}
-					}
-				}
+// // 子线程定时检查意外断开的录像重新录制
+// func (r *Record) StartRetryRecord() {
+// 	if r.Retry == 0 {
+// 		return
+// 	}
+// 	log.Debugf("%v录像自动重试开启。。", r.Path, zap.Any("retry", r.Retry), zap.Any("retryInterval", r.RetryInterval))
+// 	go func() {
+// 		var interval = r.RetryInterval
+// 		if interval <= 0 {
+// 			interval = 1 * time.Second
+// 		}
+// 		for {
+// 			var removes = []*Recorder{}
+// 			RecordPluginConfig.recordings.Range(func(key, value any) bool {
+// 				ir, ok := value.(IRecorder)
+// 				if ok {
+// 					var recorder = ir.GetRecorder()
+// 					if recorder.IsRecoding {
+// 						recorder.RetryCount = 0
+// 						// removes = append(removes, recorder)
+// 					} else {
+// 						//重试
+// 						if r.Retry < 0 || recorder.RetryCount < r.Retry {
+// 							recorder.RetryCount++
+// 							log.Debug("录像重试。。", zap.Any("ID", recorder.ID), zap.Any("retryCount", recorder.RetryCount))
+// 							recorder.start(recorder.Spesific.(IRecorder), recorder.StreamPath, recorder.SubType)
+// 						} else {
+// 							log.Debug("超重试次数,停止录像", zap.Any("ID", recorder.ID), zap.Any("retryCount", recorder.RetryCount))
+// 							removes = append(removes, recorder)
+// 							recorder.Stop(zap.String("resion", "重试超最大次数"))
+// 							recorder.Close()
+// 						}
+// 					}
+// 				}
 
-				return true
-			})
-			if len(removes) > 0 {
-				for _, rem := range removes {
-					RecordPluginConfig.recordings.Delete(rem.ID)
-					delete(r.recording, rem.StreamPath)
-				}
-			}
-			time.Sleep(interval)
-		}
-	}()
-}
+// 				return true
+// 			})
+// 			if len(removes) > 0 {
+// 				for _, rem := range removes {
+// 					RecordPluginConfig.recordings.Delete(rem.ID)
+// 					delete(r.recording, rem.StreamPath)
+// 				}
+// 			}
+// 			time.Sleep(interval)
+// 		}
+// 	}()
+// }
