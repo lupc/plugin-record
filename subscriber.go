@@ -141,7 +141,7 @@ func (r *Recorder) start(re IRecorder, streamPath string, subType byte) (err err
 
 func (r *Recorder) cut(absTime uint32) {
 	if ts := absTime - r.SkipTS; time.Duration(ts)*time.Millisecond >= r.Fragment {
-		r.Debug("切片", zap.Any("ID", r.ID))
+		// r.Debug("切片", zap.Any("ID", r.ID))
 		r.SkipTS = absTime
 		r.Close()
 		if file, err := r.Spesific.(IRecorder).CreateFile(); err == nil {
