@@ -10,8 +10,23 @@ import (
 	"m7s.live/engine/v4/util"
 )
 
+// 设置跨域
+func setupCORS(w *http.ResponseWriter) {
+	// (*w).Header().Set("Access-Control-Allow-Origin", "*")
+	// // (*w).Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+	// (*w).Header().Set("Access-Control-Allow-Headers", "*")
+	(*w).Header().Set("Access-Control-Allow-Origin", "*")
+	(*w).Header().Set("Access-Control-Allow-Headers", "Content-Type,authorization,Authorization")
+	(*w).Header().Add("Access-Control-Allow-Credentials", "true")
+	(*w).Header().Add("Access-Control-Max-Age", "86400000")
+	(*w).Header().Add("Access-Control-Allow-Methods", "OPTIONS, HEAD, POST, GET, PUT, DELETE")
+
+}
+
 // 下载历史录像
 func (p *RecordConfig) API_download(w http.ResponseWriter, r *http.Request) {
+
+	setupCORS(&w)
 
 	//统一处理错误
 	defer func() {
@@ -35,11 +50,12 @@ func (p *RecordConfig) API_download(w http.ResponseWriter, r *http.Request) {
 		panic("生成HLS点播文件失败！")
 	}
 
-	var downloadName = fmt.Sprintf("%v-%v-%v.mp4", strings.ReplaceAll(streamPath, "/", "-"), m3u8Info.StartTime.Unix(), m3u8Info.EndTime.Unix())
-	w.Header().Set("Content-Type", "video/octet-stream")
+	var downloadName = fmt.Sprintf("%v-%v-%v.ts", strings.ReplaceAll(streamPath, "/", "-"), m3u8Info.StartTime.Unix(), m3u8Info.EndTime.Unix())
+	// w.Header().Set("Content-Type", "video/octet-stream")
+	w.Header().Set("Content-Type", "video/mpeg")
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment;filename=%v", downloadName))
 	var errOut util.Buffer
-	cmd := exec.Command(p.FFmpeg, "-i", m3u8Info.Path, "-vcodec", "copy", "-acodec", "copy", "-f", "mpeg", "pipe:1")
+	cmd := exec.Command(p.FFmpeg, "-i", m3u8Info.Path, "-vcodec", "copy", "-acodec", "copy", "-f", "mpegts", "pipe:1")
 	cmd.Stderr = &errOut
 	cmd.Stdout = w
 	cmd.Run()
