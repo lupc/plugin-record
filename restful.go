@@ -47,6 +47,14 @@ func (conf *RecordConfig) API_list(w http.ResponseWriter, r *http.Request) {
 }
 
 func (conf *RecordConfig) API_start(w http.ResponseWriter, r *http.Request) {
+
+	//统一处理错误
+	defer func() {
+		if err := recover(); err != nil {
+			http.Error(w, fmt.Sprint(err), http.StatusInternalServerError)
+		}
+	}()
+
 	query := r.URL.Query()
 	streamPath := query.Get("streamPath")
 	fileName := query.Get("fileName")

@@ -112,6 +112,16 @@ func (r *Recorder) getLastDir(streamPath string) string {
 // }
 
 func (r *Recorder) start(re IRecorder, streamPath string, subType byte) (err error) {
+
+	if actual, loaded := RecordPluginConfig.recordings.Load(r.ID); loaded {
+		if ir, ok := actual.(IRecorder); ok {
+			var rcd = ir.GetRecorder()
+			if rcd == nil || rcd.StreamPath == "" || rcd.StartTime.IsZero() {
+				rcd.stopRecord()
+			}
+		}
+	}
+
 	if _, loaded := RecordPluginConfig.recordings.LoadOrStore(r.ID, re); loaded {
 		return ErrRecordExist
 	}
@@ -127,16 +137,23 @@ func (r *Recorder) start(re IRecorder, streamPath string, subType byte) (err err
 			r.StartTime = time.Now()
 			// r.IsRecoding = true
 			r.PlayBlock(subType)
-			RecordPluginConfig.recordings.Delete(r.ID)
-			delete(r.recording, streamPath)
-			re.Close()
-			// r.IsRecoding = false
-			// RecordPluginConfig.retryRecorders.LoadOrStore(r.ID, re)
-			r.Sugar().Debugf("%v已停止录制。", r.ID)
+			r.stopRecord()
 		}()
 	}
 
 	return
+}
+
+func (r *Recorder) stopRecord() {
+	RecordPluginConfig.recordings.Delete(r.ID)
+	delete(r.recording, r.StreamPath)
+	if r.Closer != nil {
+		r.Closer.Close()
+	}
+	// r.Close()
+	// r.IsRecoding = false
+	// RecordPluginConfig.retryRecorders.LoadOrStore(r.ID, re)
+	r.Sugar().Debugf("%v已停止录制。", r.ID)
 }
 
 func (r *Recorder) cut(absTime uint32) {
