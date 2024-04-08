@@ -78,6 +78,7 @@ func (conf *RecordConfig) API_start(w http.ResponseWriter, r *http.Request) {
 	case "fmp4":
 		irecorder = NewFMP4Recorder()
 	case "hls":
+		// irecorder = GetHLSRecorder(streamPath)
 		irecorder = NewHLSRecorder()
 	case "raw":
 		irecorder = NewRawRecorder()

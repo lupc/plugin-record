@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"sync"
 	"time"
 
 	"go.uber.org/zap"
@@ -17,6 +18,7 @@ import (
 )
 
 type HLSRecorder struct {
+	streamPath         string
 	playlist           hls.Playlist
 	dayPlayList        hls.Playlist
 	video_cc, audio_cc byte
@@ -25,6 +27,7 @@ type HLSRecorder struct {
 	MemoryTs `json:"-" yaml:"-"`
 	lastInf  MyInf //记录最后一个Inf
 
+	locker sync.RWMutex
 }
 
 type MyInf struct {
@@ -32,20 +35,7 @@ type MyInf struct {
 	Time time.Time //时间
 }
 
-// 打开或创建一个每天的m3u
-// func (r *HLSRecorder) openOrCreateDayM3u8() (f FileWr, err error) {
-// 	var now = time.Now()
-// 	filePath := filepath.Join(r.Stream.Path, fmt.Sprintf("%v%v", now.Format("20060102"), r.Ext))
-
-// 	f, err = r.CreateFileFn(filePath, r.append)
-// 	if err == nil {
-// 		r.Info("create file", zap.String("path", filePath))
-// 	} else {
-// 		r.Error("create file", zap.String("path", filePath), zap.Error(err))
-// 	}
-
-// 	return
-// }
+var HlsRecorders sync.Map
 
 func IsFileExist(path string) bool {
 	_, err := os.Stat(path)
@@ -93,20 +83,42 @@ func (h *HLSRecorder) initDayPlaylist() {
 
 }
 
-func NewHLSRecorder() (r *HLSRecorder) {
-	r = &HLSRecorder{}
+func GetHLSRecorder(streamPath string) (r *HLSRecorder) {
+
+	r = &HLSRecorder{
+		streamPath: streamPath,
+	}
 	r.Record = RecordPluginConfig.Hls
+	if item, loaded := HlsRecorders.LoadOrStore(r.streamPath, r); loaded {
+		if or, ok := item.(*HLSRecorder); ok {
+			r = or
+		}
+	}
+
 	return r
 }
 
+func NewHLSRecorder() (r *HLSRecorder) {
+	r = &HLSRecorder{}
+	r.Record = RecordPluginConfig.Hls
+	return
+}
+
 func (h *HLSRecorder) Start(streamPath string) error {
+
+	h.locker.Lock()
+	defer h.locker.Unlock()
+
 	h.ID = streamPath + "/hls"
+
+	// h.Debug("HLS开始录制", zap.Any("streamPath", streamPath))
 	//注册回调
 	h.lastDirChanged = func(dir string) {
 		//目录变更，新建新的m3u8文件
 		h.initDayPlaylist()
 	}
-	return h.start(h, streamPath, SUBTYPE_RAW)
+	var err = h.start(h, streamPath, SUBTYPE_RAW)
+	return err
 }
 
 func (h *HLSRecorder) OnEvent(event any) {
@@ -186,6 +198,7 @@ func (h *HLSRecorder) CreateFile() (fw FileWr, err error) {
 		h.Error("create file", zap.String("path", filePath), zap.Error(err))
 		return
 	}
+	h.FileName = filePath
 	h.Trace("create file", zap.String("path", filePath))
 
 	var duration = h.Fragment.Seconds()

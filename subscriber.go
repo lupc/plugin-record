@@ -21,15 +21,17 @@ type IRecorder interface {
 type Recorder struct {
 	Subscriber     `json:"-" yaml:"-"`
 	SkipTS         uint32
+	LastCutTime    time.Time //最后切片时间
+	IsRecording    bool      //是否正在录制
 	Record         `json:"-" yaml:"-"`
 	File           FileWr `json:"-" yaml:"-"`
 	FileName       string // 自定义文件名，分段录像无效
 	append         bool   // 是否追加模式
 	LastDir        string //记录最后录像目录路径
 	lastDirChanged func(dir string)
-	// IsRecoding     bool  //正在录像
 	// RetryCount     int32 //重试次数
 	StartTime  time.Time //开始录像时间
+	StopTime   time.Time //停止录像时间
 	StreamPath string
 	SubType    byte
 	RID        string
@@ -111,48 +113,71 @@ func (r *Recorder) getLastDir(streamPath string) string {
 // 	return
 // }
 
+// // 定时检测是否需要结束录像
+// func (r *Recorder) pollingCheck() {
+// 	for r.IsRecording {
+// 		if time.Since(r.LastCutTime) > (r.Record.Fragment * 5) {
+// 			r.stopRecord()
+// 		}
+// 		time.Sleep(2 * time.Second)
+// 	}
+
+// }
+
 func (r *Recorder) start(re IRecorder, streamPath string, subType byte) (err error) {
 
-	if actual, loaded := RecordPluginConfig.recordings.Load(r.ID); loaded {
-		if ir, ok := actual.(IRecorder); ok {
+	// if actual, loaded := RecordPluginConfig.recordings.Load(r.ID); loaded {
+	// 	if ir, ok := actual.(IRecorder); ok {
+	// 		var rcd = ir.GetRecorder()
+	// 		if rcd == nil || rcd.StreamPath == "" || rcd.StartTime.IsZero() {
+	// 			rcd.stopRecord()
+	// 		}
+	// 	}
+	// }
+	if oldRe, loaded := RecordPluginConfig.recordings.LoadOrStore(r.ID, re); loaded {
+		// return ErrRecordExist
+
+		if ir, ok := oldRe.(IRecorder); ok {
 			var rcd = ir.GetRecorder()
-			if rcd == nil || rcd.StreamPath == "" || rcd.StartTime.IsZero() {
-				rcd.stopRecord()
+			if rcd.IsRecording {
+				return ErrRecordExist
 			}
 		}
-	}
-
-	if _, loaded := RecordPluginConfig.recordings.LoadOrStore(r.ID, re); loaded {
-		return ErrRecordExist
 	}
 	err = plugin.Subscribe(streamPath, re)
 	if err == nil {
 		r.RID = r.ID
 		r.StreamPath = streamPath
 		r.SubType = subType
-		r.recording[streamPath] = re
+		// r.recording[streamPath] = re
 		r.Closer = re
 		r.Sugar().Debugf("%v开始录制。。", r.ID)
+		r.IsRecording = true
 		go func() {
 			r.StartTime = time.Now()
 			// r.IsRecoding = true
 			r.PlayBlock(subType)
-			r.stopRecord()
+			r.Sugar().Debugf("%v阻塞播放结束", r.ID)
+			r.stopRecord() //其他地方调stop用会崩溃
 		}()
+
+		// go r.pollingCheck()
 	}
 
 	return
 }
 
 func (r *Recorder) stopRecord() {
-	RecordPluginConfig.recordings.Delete(r.ID)
-	delete(r.recording, r.StreamPath)
-	if r.Closer != nil {
-		r.Closer.Close()
+	if !r.IsRecording {
+		return
 	}
-	// r.Close()
-	// r.IsRecoding = false
-	// RecordPluginConfig.retryRecorders.LoadOrStore(r.ID, re)
+	RecordPluginConfig.recordings.Delete(r.ID)
+	// delete(r.recording, r.StreamPath)
+	// if r.Closer != nil {
+	// 	r.Closer.Close()
+	// }
+	r.IsRecording = false
+	r.StopTime = time.Now()
 	r.Sugar().Debugf("%v已停止录制。", r.ID)
 }
 
@@ -160,6 +185,7 @@ func (r *Recorder) cut(absTime uint32) {
 	if ts := absTime - r.SkipTS; time.Duration(ts)*time.Millisecond >= r.Fragment {
 		// r.Debug("切片", zap.Any("ID", r.ID))
 		r.SkipTS = absTime
+		r.LastCutTime = time.Now()
 		r.Close()
 		if file, err := r.Spesific.(IRecorder).CreateFile(); err == nil {
 			r.File = file

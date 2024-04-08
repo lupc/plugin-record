@@ -36,7 +36,7 @@ type Record struct {
 	fs            http.Handler
 	CreateFileFn  func(filename string, append bool) (FileWr, error) `json:"-" yaml:"-"`
 	GetDurationFn func(file io.ReadSeeker) uint32                    `json:"-" yaml:"-"`
-	recording     map[string]IRecorder
+	// recording     map[string]IRecorder
 }
 
 func (r *Record) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -48,7 +48,7 @@ func (r *Record) NeedRecord(streamPath string) bool {
 }
 
 func (r *Record) Init() {
-	r.recording = make(map[string]IRecorder)
+	// r.recording = make(map[string]IRecorder)
 	os.MkdirAll(r.Path, 0777)
 	if r.Filter != "" {
 		r.filterReg = regexp.MustCompile(r.Filter)
