@@ -126,15 +126,7 @@ func (r *Recorder) getLastDir(streamPath string) string {
 
 func (r *Recorder) start(re IRecorder, streamPath string, subType byte) (err error) {
 
-	// if actual, loaded := RecordPluginConfig.recordings.Load(r.ID); loaded {
-	// 	if ir, ok := actual.(IRecorder); ok {
-	// 		var rcd = ir.GetRecorder()
-	// 		if rcd == nil || rcd.StreamPath == "" || rcd.StartTime.IsZero() {
-	// 			rcd.stopRecord()
-	// 		}
-	// 	}
-	// }
-	if oldRe, loaded := RecordPluginConfig.recordings.LoadOrStore(r.ID, re); loaded {
+	if oldRe, loaded := RecordPluginConfig.recordings.Load(r.ID); loaded {
 		// return ErrRecordExist
 
 		if ir, ok := oldRe.(IRecorder); ok {
@@ -146,6 +138,8 @@ func (r *Recorder) start(re IRecorder, streamPath string, subType byte) (err err
 	}
 	err = plugin.Subscribe(streamPath, re)
 	if err == nil {
+		RecordPluginConfig.recordings.Delete(r.ID)
+		RecordPluginConfig.recordings.Store(r.ID, re)
 		r.RID = r.ID
 		r.StreamPath = streamPath
 		r.SubType = subType
@@ -162,6 +156,8 @@ func (r *Recorder) start(re IRecorder, streamPath string, subType byte) (err err
 		}()
 
 		// go r.pollingCheck()
+	} else {
+		RecordPluginConfig.recordings.Delete(r.ID)
 	}
 
 	return
