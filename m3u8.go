@@ -36,7 +36,7 @@ const (
 )
 
 // 根据m3u8文件路径新建m3u8文件信息
-func New(fileName string) (*M3u8FileInfo, error) {
+func NewM3u8Info(fileName string) (*M3u8FileInfo, error) {
 	var m3u8 = M3u8FileInfo{}
 	var errOut error
 	data, err_read := os.ReadFile(fileName) // 读取文件
@@ -93,7 +93,7 @@ func New(fileName string) (*M3u8FileInfo, error) {
 	return &m3u8, errOut
 }
 
-func Make(tsInfos []*TsInfo) (info *M3u8FileInfo, err error) {
+func MakeM3u8Info(tsInfos []*TsInfo) (info *M3u8FileInfo, err error) {
 
 	var tsLen = len(tsInfos)
 	if tsInfos == nil || tsLen == 0 {

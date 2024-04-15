@@ -18,17 +18,19 @@ import (
 )
 
 type HLSRecorder struct {
-	streamPath         string
-	playlist           hls.Playlist
-	dayPlayList        hls.Playlist
+	streamPath string
+	//playlist           hls.Playlist
+	dayPlayList        *hls.Playlist
 	video_cc, audio_cc byte
-	packet             mpegts.MpegTsPESPacket
+	//packet             mpegts.MpegTsPESPacket
 	Recorder
 	MemoryTs `json:"-" yaml:"-"`
 	lastInf  MyInf //记录最后一个Inf
 
-	locker sync.RWMutex
+	//locker sync.RWMutex
 }
+
+var hlsLocker sync.RWMutex
 
 type MyInf struct {
 	hls.PlaylistInf
@@ -48,7 +50,12 @@ func IsFileExist(path string) bool {
 	return true
 }
 func (h *HLSRecorder) initDayPlaylist() {
-	h.dayPlayList = hls.Playlist{
+
+	if h.dayPlayList != nil {
+		return
+	}
+
+	h.dayPlayList = &hls.Playlist{
 		Writer:         h.Writer,
 		Version:        3,
 		Sequence:       0,
@@ -106,8 +113,8 @@ func NewHLSRecorder() (r *HLSRecorder) {
 
 func (h *HLSRecorder) Start(streamPath string) error {
 
-	h.locker.Lock()
-	defer h.locker.Unlock()
+	hlsLocker.Lock()
+	defer hlsLocker.Unlock()
 
 	h.ID = streamPath + "/hls"
 

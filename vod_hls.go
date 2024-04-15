@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"go.uber.org/zap"
 	"m7s.live/engine/v4/log"
 	// . "m7s.live/engine/v4"
 )
@@ -93,7 +94,7 @@ func findM3u8Info(dir string, st, et time.Time) *M3u8FileInfo {
 		if err == nil && path.Ext(info.Name()) == ".m3u8" {
 
 			relPath := path.Join(dir, info.Name())
-			var info, err = New(relPath)
+			var info, err = NewM3u8Info(relPath)
 			if err == nil {
 
 				var curIntersection int64 = 0
@@ -175,12 +176,14 @@ func findTsInfos(dir string, st, et time.Time) (tsFiles []*TsInfo) {
 						continue
 					}
 					var fileCreateTime = time.Date(y, time.Month(m), d, 0, 0, 0, 0, time.Local)
-					var fileModTime = info.ModTime()
-
+					//var fileModTime = info.ModTime() //windows不准，获取到缓存的修改时间
+					var fileModTime = time.Now()
+					log.LocaleLogger.Debug("m3u8信息", zap.Any("dir", dir), zap.Any("file", info.Name()), zap.Any("creatTime", fileCreateTime), zap.Time("modTime", fileModTime))
 					if st.Before(fileModTime) && et.After(fileCreateTime) {
 						relPath := path.Join(dir, info.Name())
-						var info, err = New(relPath)
+						var info, err = NewM3u8Info(relPath)
 						if err == nil {
+							//log.LocaleLogger.Debug("m3u8内容", zap.Any("startTime", info.StartTime), zap.Time("endTime", info.EndTime), zap.Int("tsFilesCount", len(info.TsFiles)))
 							for _, ts := range info.TsFiles {
 								if (st.Before(ts.Time) || st.Equal(ts.Time)) && et.After(ts.Time) {
 									tsFiles = append(tsFiles, ts)
@@ -204,16 +207,16 @@ func (p *RecordConfig) genVod(startTime, endTime, streamPath string) *M3u8FileIn
 	var st = toTime(startTime)
 	var et = toTime(endTime)
 
-	log.Infof("HLS点播生成, st=%v,et=%v,path=%v", st, et, streamPath)
+	log.Infof("尝试生成HLS点播, st=%v,et=%v,path=%v", st, et, streamPath)
 	var findDir = path.Join(p.Hls.Path, streamPath)
 	// var m3u8Info = findM3u8Info(tsDir, st, et)
 	var tsInfos = findTsInfos(findDir, st, et)
-	newInfo, err := Make(tsInfos)
+	newM3u8Info, err := MakeM3u8Info(tsInfos)
 	if err != nil {
 		panic(err)
 	}
 
-	newInfo.JoinPath = "../"
+	newM3u8Info.JoinPath = "../"
 	var vodDir = path.Join(findDir, "vod")
 	if _, err := os.Stat(vodDir); os.IsNotExist(err) {
 		// 先创建文件夹
@@ -227,19 +230,19 @@ func (p *RecordConfig) genVod(startTime, endTime, streamPath string) *M3u8FileIn
 			panic(err)
 		}
 	}
-	var fileName = fmt.Sprintf("%v-%v.m3u8", newInfo.StartTime.Unix(), newInfo.EndTime.Unix())
+	var fileName = fmt.Sprintf("%v-%v.m3u8", newM3u8Info.StartTime.Unix(), newM3u8Info.EndTime.Unix())
 	var m3u8Path = path.Join(vodDir, fileName)
-	err = os.WriteFile(m3u8Path, []byte(newInfo.ToFileContent()), 0666)
+	err = os.WriteFile(m3u8Path, []byte(newM3u8Info.ToFileContent()), 0666)
 	if err != nil {
 		panic(err)
 	}
 	log.Infof("HLS点播文件已生成: %v,", m3u8Path)
-	newInfo.Path = m3u8Path
+	newM3u8Info.Path = m3u8Path
 	// res.Url = fmt.Sprintf("http://%v/%v", r.Host, strings.ReplaceAll(filePath, "/hls", ""))
 	// res.StartTime = newInfo.StartTime
 	// res.EndTime = newInfo.EndTime
 
-	return newInfo
+	return newM3u8Info
 }
 
 // 生成HLS点播文件API接口

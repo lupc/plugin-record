@@ -19,20 +19,20 @@ type IRecorder interface {
 }
 
 type Recorder struct {
-	Subscriber     `json:"-" yaml:"-"`
-	SkipTS         uint32
-	LastCutTime    time.Time //最后切片时间
-	IsRecording    bool      //是否正在录制
+	Subscriber  `json:"-" yaml:"-"`
+	SkipTS      uint32
+	LastCutTime time.Time //最后切片时间
+	//IsRecording    bool      //是否正在录制
 	Record         `json:"-" yaml:"-"`
 	File           FileWr `json:"-" yaml:"-"`
 	FileName       string // 自定义文件名，分段录像无效
 	append         bool   // 是否追加模式
-	LastDir        string //记录最后录像目录路径
+	LastDir        string `json:"-" yaml:"-"` //记录最后录像目录路径
 	lastDirChanged func(dir string)
 	// RetryCount     int32 //重试次数
-	StartTime  time.Time //开始录像时间
-	StopTime   time.Time //停止录像时间
-	StreamPath string
+	StartTime time.Time //开始录像时间
+	// StopTime   time.Time //停止录像时间
+	StreamPath string `json:"-" yaml:"-"`
 	SubType    byte
 	RID        string
 }
@@ -126,27 +126,25 @@ func (r *Recorder) getLastDir(streamPath string) string {
 
 func (r *Recorder) start(re IRecorder, streamPath string, subType byte) (err error) {
 
-	if oldRe, loaded := RecordPluginConfig.recordings.Load(r.ID); loaded {
-		// return ErrRecordExist
+	if _, loaded := RecordPluginConfig.recordings.LoadOrStore(r.ID, re); loaded {
+		return ErrRecordExist
 
-		if ir, ok := oldRe.(IRecorder); ok {
-			var rcd = ir.GetRecorder()
-			if rcd.IsRecording {
-				return ErrRecordExist
-			}
-		}
+		// if ir, ok := oldRe.(IRecorder); ok {
+		// 	var rcd = ir.GetRecorder()
+		// 	if rcd.IsRecording {
+		// 		return ErrRecordExist
+		// 	}
+		// }
 	}
 	err = plugin.Subscribe(streamPath, re)
 	if err == nil {
-		RecordPluginConfig.recordings.Delete(r.ID)
-		RecordPluginConfig.recordings.Store(r.ID, re)
 		r.RID = r.ID
 		r.StreamPath = streamPath
 		r.SubType = subType
 		// r.recording[streamPath] = re
 		r.Closer = re
 		r.Sugar().Debugf("%v开始录制。。", r.ID)
-		r.IsRecording = true
+		//r.IsRecording = true
 		go func() {
 			r.StartTime = time.Now()
 			// r.IsRecoding = true
@@ -156,24 +154,22 @@ func (r *Recorder) start(re IRecorder, streamPath string, subType byte) (err err
 		}()
 
 		// go r.pollingCheck()
-	} else {
-		RecordPluginConfig.recordings.Delete(r.ID)
 	}
 
 	return
 }
 
 func (r *Recorder) stopRecord() {
-	if !r.IsRecording {
-		return
-	}
+	// if !r.IsRecording {
+	// 	return
+	// }
 	RecordPluginConfig.recordings.Delete(r.ID)
 	// delete(r.recording, r.StreamPath)
 	// if r.Closer != nil {
 	// 	r.Closer.Close()
 	// }
-	r.IsRecording = false
-	r.StopTime = time.Now()
+	// r.IsRecording = false
+	// r.StopTime = time.Now()
 	r.Sugar().Debugf("%v已停止录制。", r.ID)
 }
 
