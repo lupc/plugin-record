@@ -51,10 +51,6 @@ func IsFileExist(path string) bool {
 }
 func (h *HLSRecorder) initDayPlaylist() {
 
-	if h.dayPlayList != nil {
-		return
-	}
-
 	h.dayPlayList = &hls.Playlist{
 		Writer:         h.Writer,
 		Version:        3,
@@ -154,7 +150,9 @@ func (h *HLSRecorder) OnEvent(event any) {
 		if h.File, err = h.CreateFile(); err != nil {
 			return
 		}
-		h.initDayPlaylist()
+		if h.dayPlayList == nil {
+			h.initDayPlaylist()
+		}
 	case AudioFrame:
 		h.Recorder.OnEvent(event)
 		pes := &mpegts.MpegtsPESFrame{

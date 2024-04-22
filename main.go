@@ -6,6 +6,7 @@ import (
 	"io"
 	"sync"
 
+	"go.uber.org/zap"
 	. "m7s.live/engine/v4"
 	"m7s.live/engine/v4/codec"
 	"m7s.live/engine/v4/config"
@@ -96,8 +97,10 @@ func (conf *RecordConfig) OnEvent(event any) {
 			go NewFMP4Recorder().Start(streamPath)
 		}
 		if conf.Hls.NeedRecord(streamPath) {
-			// go GetHLSRecorder(streamPath).Start(streamPath)
-			go NewHLSRecorder().Start(streamPath)
+
+			plugin.Logger.Debug("SEpublish start record", zap.String("streamPath", streamPath))
+			go GetHLSRecorder(streamPath).Start(streamPath)
+			// go NewHLSRecorder().Start(streamPath)
 		}
 		if conf.Raw.NeedRecord(streamPath) {
 			go NewRawRecorder().Start(streamPath)

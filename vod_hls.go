@@ -177,7 +177,7 @@ func findTsInfos(dir string, st, et time.Time) (tsFiles []*TsInfo) {
 					}
 					var fileCreateTime = time.Date(y, time.Month(m), d, 0, 0, 0, 0, time.Local)
 					//var fileModTime = info.ModTime() //windows不准，获取到缓存的修改时间
-					var fileModTime = time.Now()
+					var fileModTime = fileCreateTime.Add(24 * time.Hour)
 					log.LocaleLogger.Debug("m3u8信息", zap.Any("dir", dir), zap.Any("file", info.Name()), zap.Any("creatTime", fileCreateTime), zap.Time("modTime", fileModTime))
 					if st.Before(fileModTime) && et.After(fileCreateTime) {
 						relPath := path.Join(dir, info.Name())
