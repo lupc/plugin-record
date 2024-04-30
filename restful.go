@@ -64,7 +64,7 @@ func (conf *RecordConfig) API_start(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	t := query.Get("type")
-	var id string
+	//var id string
 	var err error
 	var irecorder IRecorder
 	switch t {
@@ -78,8 +78,8 @@ func (conf *RecordConfig) API_start(w http.ResponseWriter, r *http.Request) {
 	case "fmp4":
 		irecorder = NewFMP4Recorder()
 	case "hls":
-		// irecorder = GetHLSRecorder(streamPath)
-		irecorder = NewHLSRecorder()
+		irecorder = GetHLSRecorder(streamPath)
+		// irecorder = NewHLSRecorder()
 	case "raw":
 		irecorder = NewRawRecorder()
 	case "raw_audio":
@@ -90,17 +90,19 @@ func (conf *RecordConfig) API_start(w http.ResponseWriter, r *http.Request) {
 	}
 	recorder := irecorder.GetRecorder()
 	if fragment != "" {
-		recorder.Fragment, err = time.ParseDuration(fragment)
+		recorder.Fragment, _ = time.ParseDuration(fragment)
 	}
 	recorder.FileName = fileName
 	recorder.append = query.Get("append") != ""
+	// plugin.Logger.Debug("visit record/api/start begin", zap.Any("url", r.URL))
 	err = irecorder.Start(streamPath)
-	id = recorder.ID
+	// plugin.Logger.Debug("visit record/api/start end", zap.Any("url", r.URL))
+	// id = recorder.ID
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	fmt.Fprintf(w, id)
+	//fmt.Fprintf(w, id)
 }
 
 func (conf *RecordConfig) API_list_recording(w http.ResponseWriter, r *http.Request) {

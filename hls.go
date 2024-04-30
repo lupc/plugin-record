@@ -27,7 +27,8 @@ type HLSRecorder struct {
 	MemoryTs `json:"-" yaml:"-"`
 	lastInf  MyInf //记录最后一个Inf
 
-	//locker sync.RWMutex
+	// locker sync.RWMutex
+	isStarting bool //开始中
 }
 
 var hlsLocker sync.RWMutex
@@ -91,6 +92,10 @@ func GetHLSRecorder(streamPath string) (r *HLSRecorder) {
 	r = &HLSRecorder{
 		streamPath: streamPath,
 	}
+	r.BeforeStartFunc = func() {
+		// r.dayPlayList = nil
+		r.initDayPlaylist()
+	}
 	r.Record = RecordPluginConfig.Hls
 	if item, loaded := HlsRecorders.LoadOrStore(r.streamPath, r); loaded {
 		if or, ok := item.(*HLSRecorder); ok {
@@ -109,10 +114,21 @@ func NewHLSRecorder() (r *HLSRecorder) {
 
 func (h *HLSRecorder) Start(streamPath string) error {
 
-	hlsLocker.Lock()
-	defer hlsLocker.Unlock()
+	// h.locker.Lock()
+	// defer h.locker.Unlock()
 
+	if h.isStarting {
+		return nil
+	}
+	h.isStarting = true
+	defer func() {
+		h.isStarting = false
+	}()
+
+	plugin.Logger.Debug("hls record start begin", zap.Any("path", streamPath))
 	h.ID = streamPath + "/hls"
+
+	//清空m3u8info
 
 	// h.Debug("HLS开始录制", zap.Any("streamPath", streamPath))
 	//注册回调
@@ -121,6 +137,7 @@ func (h *HLSRecorder) Start(streamPath string) error {
 		h.initDayPlaylist()
 	}
 	var err = h.start(h, streamPath, SUBTYPE_RAW)
+	plugin.Logger.Debug("hls record start end", zap.Any("path", streamPath))
 	return err
 }
 

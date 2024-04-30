@@ -32,9 +32,10 @@ type Recorder struct {
 	// RetryCount     int32 //重试次数
 	StartTime time.Time //开始录像时间
 	// StopTime   time.Time //停止录像时间
-	StreamPath string `json:"-" yaml:"-"`
-	SubType    byte
-	RID        string
+	StreamPath      string `json:"-" yaml:"-"`
+	SubType         byte
+	RID             string
+	BeforeStartFunc func() `json:"-" yaml:"-"` //在开始前执行
 }
 
 // 最后录像目录路径
@@ -118,7 +119,7 @@ func (r *Recorder) pollingCheck() {
 	for r.IsRecording {
 		if r.IsCutNotChange() {
 			r.Stop(zap.String("reason", "cut time not change"))
-			// r.stopRecord()
+			r.stopRecord()
 			r.Logger.Debug("IsCutNotChange true", zap.Any("RID", r.RID), zap.Any("startTime", r.StartTime), zap.Any("cutTime", r.LastCutTime), zap.Any("Fragment", r.Record.Fragment))
 		}
 		time.Sleep(r.Record.Fragment)
@@ -140,6 +141,9 @@ func (r *Recorder) start(re IRecorder, streamPath string, subType byte) (err err
 	if err == nil {
 		r.IsRecording = true
 		RecordPluginConfig.recordings.Store(r.ID, re)
+		if r.BeforeStartFunc != nil {
+			r.BeforeStartFunc()
+		}
 		r.RID = r.ID
 		r.StreamPath = streamPath
 		r.SubType = subType
