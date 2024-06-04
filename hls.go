@@ -39,6 +39,7 @@ type MyInf struct {
 }
 
 var HlsRecorders sync.Map
+var mapRecordStarting sync.Map //记录各个录像是否开始中
 
 func IsFileExist(path string) bool {
 	_, err := os.Stat(path)
@@ -94,6 +95,7 @@ func GetHLSRecorder(streamPath string) (r *HLSRecorder) {
 	}
 	r.BeforeStartFunc = func() {
 		// r.dayPlayList = nil
+
 		r.initDayPlaylist()
 	}
 	r.Record = RecordPluginConfig.Hls
@@ -112,18 +114,32 @@ func NewHLSRecorder() (r *HLSRecorder) {
 	return
 }
 
+func IsStarting(rid string) (isString bool) {
+	isString = false
+	act, isExist := mapRecordStarting.LoadOrStore(rid, isString)
+	if isExist {
+		isString = act.(bool)
+	}
+	return
+}
+
 func (h *HLSRecorder) Start(streamPath string) error {
 
 	// h.locker.Lock()
 	// defer h.locker.Unlock()
 
-	if h.isStarting {
+	// if h.isStarting {
+	// 	return nil
+	// }
+	// h.isStarting = true
+	// defer func() {
+	// 	h.isStarting = false
+	// }()
+	if IsStarting(streamPath) {
 		return nil
 	}
-	h.isStarting = true
-	defer func() {
-		h.isStarting = false
-	}()
+	mapRecordStarting.Store(streamPath, true)
+	defer mapRecordStarting.Store(streamPath, false)
 
 	plugin.Logger.Debug("hls record start begin", zap.Any("path", streamPath))
 	h.ID = streamPath + "/hls"

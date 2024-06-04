@@ -133,6 +133,14 @@ func (r *Recorder) IsCutNotChange() bool {
 
 func (r *Recorder) start(re IRecorder, streamPath string, subType byte) (err error) {
 
+	defer func() {
+		err := recover() //内置函数，可以捕捉到函数异常
+		if err != nil {
+			//这里是打印错误，还可以进行报警处理，例如微信，邮箱通知
+			plugin.Logger.Error("开始录像出错", zap.Any("path", streamPath), zap.Any("err", err))
+		}
+	}()
+
 	if _, isExist := RecordPluginConfig.recordings.Load(r.ID); isExist {
 		return ErrRecordExist
 	}
@@ -151,9 +159,18 @@ func (r *Recorder) start(re IRecorder, streamPath string, subType byte) (err err
 		r.Closer = re
 		r.Sugar().Debugf("%v开始录制。。", r.ID)
 		go func() {
+			defer func() {
+				err := recover() //内置函数，可以捕捉到函数异常
+				if err != nil {
+					//这里是打印错误，还可以进行报警处理，例如微信，邮箱通知
+					plugin.Logger.Error("开始录像出错（协程）", zap.Any("path", streamPath), zap.Any("err", err))
+				}
+			}()
+
 			r.StartTime = time.Now()
 			r.PlayBlock(subType)
 			r.Sugar().Debugf("%v阻塞播放结束", r.ID)
+
 			r.stopRecord() //其他地方调stop用会崩溃
 		}()
 
@@ -168,6 +185,7 @@ func (r *Recorder) stopRecord() {
 		return
 	}
 	r.IsRecording = false
+	// r.Stop(zap.String("reason", "record stoped"))
 	RecordPluginConfig.recordings.Delete(r.ID)
 	// delete(r.recording, r.StreamPath)
 	// if r.Closer != nil {
