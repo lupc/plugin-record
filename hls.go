@@ -141,7 +141,7 @@ func (h *HLSRecorder) Start(streamPath string) error {
 	mapRecordStarting.Store(streamPath, true)
 	defer mapRecordStarting.Store(streamPath, false)
 
-	plugin.Logger.Debug("hls record start begin", zap.Any("path", streamPath))
+	//plugin.Logger.Debug("hls record start begin", zap.Any("path", streamPath))
 	h.ID = streamPath + "/hls"
 
 	//清空m3u8info
@@ -153,7 +153,7 @@ func (h *HLSRecorder) Start(streamPath string) error {
 		h.initDayPlaylist()
 	}
 	var err = h.start(h, streamPath, SUBTYPE_RAW)
-	plugin.Logger.Debug("hls record start end", zap.Any("path", streamPath))
+	//plugin.Logger.Debug("hls record start end", zap.Any("path", streamPath))
 	return err
 }
 
