@@ -97,12 +97,12 @@ func (conf *RecordConfig) API_start(w http.ResponseWriter, r *http.Request) {
 	// plugin.Logger.Debug("visit record/api/start begin", zap.Any("url", r.URL))
 	err = irecorder.Start(streamPath)
 	// plugin.Logger.Debug("visit record/api/start end", zap.Any("url", r.URL))
-	// id = recorder.ID
+	id := recorder.ID
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	//fmt.Fprintf(w, id)
+	fmt.Fprintf(w, id)
 }
 
 func (conf *RecordConfig) API_list_recording(w http.ResponseWriter, r *http.Request) {
