@@ -80,7 +80,7 @@ func CleanFiles(pathname string, days int32) error {
 			err := CleanFiles(fullname, days)
 			if err != nil {
 				log.Errorf("清理目录出错！fullname=%v, err=%v", fullname, err)
-				return err
+				//return err
 			}
 		} else {
 			var finfo, err = os.Stat(fullname)
